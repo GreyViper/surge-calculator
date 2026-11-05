@@ -9,13 +9,13 @@
   :root {
     --bg: #f5f6f8; --card: #ffffff; --text: #1b1f24; --muted: #5b6470;
     --border: #d5d9e0; --accent: #0b57d0; --good: #137333; --bad: #b3261e;
-    --good-bg: #e6f4ea; --bad-bg: #fce8e6; --warn-bg: #fff4d6;
+    --good-bg: #e6f4ea; --bad-bg: #fce8e6; --warn-bg: #fff4d6; --on-accent: #ffffff;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #14171c; --card: #1d222a; --text: #e8eaed; --muted: #a0a8b3;
       --border: #38404b; --accent: #8ab4f8; --good: #81c995; --bad: #f28b82;
-      --good-bg: #17301f; --bad-bg: #3a1c1a; --warn-bg: #3a3014;
+      --good-bg: #17301f; --bad-bg: #3a1c1a; --warn-bg: #3a3014; --on-accent: #14171c;
     }
   }
   * { box-sizing: border-box; }
@@ -34,6 +34,7 @@
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
   button, .file-btn { font: inherit; font-weight: 600; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; }
   button:hover, .file-btn:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .file-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
   .file-btn:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
   .settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
@@ -81,11 +82,12 @@
       <div><label for="rate">Incentive per call ($)</label><input type="text" id="rate" inputmode="decimal" autocomplete="off" value="1"></div>
     </div>
     <p class="info" id="abandon-hint">The incentive is met when the actual abandon rate is below the target.</p>
+    <div class="row"><button type="button" id="calc" class="primary">Calculate</button><span id="stale" class="hint" role="status"></span></div>
   </section>
 
   <section aria-labelledby="h-res">
     <h2 id="h-res">3. Results</h2>
-    <p class="info" id="empty">Results will appear here once you paste data.</p>
+    <p class="info" id="empty">Results will appear here after you paste data and click Calculate.</p>
     <div id="results" hidden>
       <div class="stats">
         <div class="stat"><div class="k">Total calls</div><div class="v" id="r-total">0</div></div>
@@ -199,12 +201,19 @@ let last = null;
 
 function showProblem(msg) { $('problem').textContent = msg; $('problem').hidden = !msg; }
 
-function update() {
+function reset() {
+  last = null;
+  $('results').hidden = true; $('empty').hidden = false; $('copied').textContent = ''; $('stale').textContent = '';
+  $('status').textContent = 'Waiting for data.'; showProblem('');
+}
+
+function markStale(msg) { if (msg || last) $('stale').textContent = msg || 'Inputs changed. Click Calculate to update the results.'; }
+
+function calculate() {
   const text = $('paste').value;
   const startSec = secOf('start'), endSec = secOf('end');
-  last = null;
-  $('results').hidden = true; $('empty').hidden = false; $('copied').textContent = '';
-  if (text.trim() === '') { $('status').textContent = 'Waiting for data.'; showProblem(''); return; }
+  reset();
+  if (text.trim() === '') { showProblem('Paste your call data first.'); return; }
   if (startSec === null || endSec === null) { showProblem('Enter both a start time and an end time.'); return; }
 
   const r = analyze(parseDelimited(text), startSec, endSec + 59); // end time includes its whole last minute
@@ -258,16 +267,20 @@ function copyResults() {
     .catch(() => { $('copied').textContent = 'Could not copy. Your browser blocked clipboard access.'; });
 }
 
-$('paste').addEventListener('input', update);
-['start', 'end', 'actual', 'rate'].forEach(id => $(id).addEventListener('input', update));
+$('calc').addEventListener('click', calculate);
+$('paste').addEventListener('input', () => markStale());
+['start', 'end', 'actual', 'rate'].forEach(id => {
+  $(id).addEventListener('input', () => markStale());
+  $(id).addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+});
 $('copy').addEventListener('click', copyResults);
-$('clear').addEventListener('click', () => { $('paste').value = ''; $('file').value = ''; update(); $('paste').focus(); });
+$('clear').addEventListener('click', () => { $('paste').value = ''; $('file').value = ''; reset(); $('paste').focus(); });
 $('file').addEventListener('change', e => {
   const f = e.target.files[0];
   if (!f) return;
-  f.text().then(t => { $('paste').value = t; update(); });
+  f.text().then(t => { $('paste').value = t; markStale('File loaded. Click Calculate.'); });
 });
-update();
+reset();
 </script>
 </body>
 </html>
