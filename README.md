@@ -56,6 +56,8 @@ Dates can look like `2026-11-04 18:51:15` or `11/4/2026 6:51:15 PM`. Only the ti
 
 Cells that span several lines (like the *Action* column) are handled, whether they come from a website or from Google Sheets.
 
+A totals footer at the bottom of the table is fine to include. It is ignored, and a note tells you one row was skipped. Leaving it out works too.
+
 ## Troubleshooting
 
 | What you see | What to do |
@@ -63,7 +65,7 @@ Cells that span several lines (like the *Action* column) are handled, whether th
 | "Could not find these column headers…" | You pasted without the header row, or a header is named differently. Copy the table again, starting from the header row. |
 | "Please fill in: …" | One or more required fields are empty. The highlighted boxes show which. |
 | "This must be a number: …" | The abandon rate or incentive box doesn't contain a number. Type it as a plain number, such as `2.5` or `1`. |
-| "…row(s) were skipped because their date/time could not be read" | Those rows have a date without a time, or in a format the calculator doesn't recognise. |
+| "…row(s) were skipped because they have no readable date and time" | Normal if you copied the totals footer at the bottom of the table. Otherwise, those rows have a date without a time, or a format the calculator doesn't recognise. |
 | Totals look too low | Check the start and end times, and look at the line under the paste box to see how many calls were left out as ringing or outside the window. |
 | A note says some calls "have no firm name" | Those calls are in the totals but can't be listed in the per-firm table. |
 | A note says some calls have a direction other than incoming/outgoing | Those calls are in the total only, not in the incoming or outbound counts. |

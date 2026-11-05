@@ -128,7 +128,9 @@ function parseDelimited(text) {
     else if (ch === d) { row.push(cell); cell = ''; }
     else if (ch === '\n' || ch === '\r') {
       if (ch === '\r' && text[i + 1] === '\n') i++;
-      if (foldLines && !DATE_START.test(text.slice(i + 1, i + 40))) { cell += '\n'; continue; }
+      // A row that already has every header column is finished; whatever follows (e.g. a totals footer) is not part of it.
+      const complete = rows.length > 0 && row.length + 1 >= rows[0].length;
+      if (foldLines && !complete && !DATE_START.test(text.slice(i + 1, i + 40))) { cell += '\n'; continue; }
       row.push(cell); cell = ''; rows.push(row); row = [];
     } else cell += ch;
   }
@@ -141,9 +143,9 @@ const normHeader = h => String(h).replace(/\s+/g, ' ').trim().toLowerCase();
 // Seconds since midnight from a pasted date/time cell, or null if unreadable.
 function timeOfDaySeconds(v) {
   const s = String(v).trim();
-  if (/^\d+(\.\d+)?$/.test(s)) return Math.round((Number(s) % 1) * 86400);
+  if (/^\d+\.\d+$/.test(s)) return Math.round((Number(s) % 1) * 86400);
   const m = s.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?\s*([AaPp][Mm])?/);
-  if (!m) return null;
+  if (!m || !/\d{4}|\d\/\d/.test(s.replace(m[0], ''))) return null; // needs a date part too, so a footer like "Total 4:23:11" is not read as a call
   let h = Number(m[1]);
   if (m[4]) h = (h % 12) + (/p/i.test(m[4]) ? 12 : 0);
   return h * 3600 + Number(m[2]) * 60 + Number(m[3] || 0);
@@ -245,7 +247,7 @@ function calculate() {
 
   const notes = [];
   if (startSec > endSec) notes.push('The start time is after the end time, so no calls can match.');
-  if (r.unreadable) notes.push(r.unreadable + ' row(s) were skipped because their date/time could not be read.');
+  if (r.unreadable) notes.push(r.unreadable + ' row(s) were skipped because they have no readable date and time. A totals row at the bottom of the table is expected to be skipped.');
   showProblem(notes.join(' '));
   $('status').textContent = r.read + ' calls read. Left out: ' + r.ringing + ' still ringing, ' + r.outside + ' outside the time window.';
 
