@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Surge Calculator</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --text: #1b1f24; --muted: #5b6470;
+    --border: #d5d9e0; --accent: #0b57d0; --good: #137333; --bad: #b3261e;
+    --good-bg: #e6f4ea; --bad-bg: #fce8e6; --warn-bg: #fff4d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171c; --card: #1d222a; --text: #e8eaed; --muted: #a0a8b3;
+      --border: #38404b; --accent: #8ab4f8; --good: #81c995; --bad: #f28b82;
+      --good-bg: #17301f; --bad-bg: #3a1c1a; --warn-bg: #3a3014;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  h2 { margin: 0 0 12px; font-size: 1.1rem; }
+  .lede { margin: 0 0 20px; color: var(--muted); }
+  section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  label, .label { display: block; font-weight: 600; margin-bottom: 4px; }
+  .fixed { padding: 8px 0; font-weight: 600; }
+  .hint { color: var(--muted); font-size: .875rem; font-weight: 400; }
+  textarea, input { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+  textarea { min-height: 130px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: .85rem; }
+  :is(textarea, input, button):focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+  button, .file-btn { font: inherit; font-weight: 600; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; }
+  button:hover, .file-btn:hover { border-color: var(--accent); }
+  .file-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .file-btn:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .stat { border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+  .stat .k { color: var(--muted); font-size: .85rem; }
+  .stat .v { font-size: 1.7rem; font-weight: 700; }
+  .stat.met { background: var(--good-bg); } .stat.met .v { color: var(--good); }
+  .stat.notmet { background: var(--bad-bg); } .stat.notmet .v { color: var(--bad); }
+  .note { background: var(--warn-bg); border-radius: 6px; padding: 8px 12px; margin: 10px 0 0; font-size: .9rem; }
+  .info { color: var(--muted); font-size: .9rem; margin: 10px 0 0; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  caption { text-align: left; font-weight: 600; padding-bottom: 4px; }
+  th, td { padding: 6px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+  th:not(:first-child), td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+  .table-wrap { max-height: 480px; overflow: auto; }
+  thead th { position: sticky; top: 0; background: var(--card); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Surge Calculator</h1>
+  <p class="lede">Paste your call table (headers included), set the window and rates, and read off the totals. Nothing you paste leaves this page.</p>
+
+  <section aria-labelledby="h-data">
+    <h2 id="h-data">1. Your call data</h2>
+    <label for="paste">Paste the table here <span class="hint">(copy it with its header row)</span></label>
+    <textarea id="paste" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
+    <div class="row">
+      <label class="file-btn">Or choose a CSV/TSV file<input type="file" id="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain"></label>
+      <button type="button" id="clear">Clear</button>
+    </div>
+    <p class="info" id="status" role="status">Waiting for data.</p>
+    <div class="note" id="problem" hidden></div>
+  </section>
+
+  <section aria-labelledby="h-set">
+    <h2 id="h-set">2. Settings</h2>
+    <div class="settings">
+      <div><label for="start">Start time</label><input type="time" id="start" value="08:30"></div>
+      <div><label for="end">End time</label><input type="time" id="end" value="22:59"></div>
+      <div><label for="actual">Actual abandon rate % <span class="hint">(from your other report)</span></label><input type="text" id="actual" inputmode="decimal" autocomplete="off" aria-describedby="abandon-hint"></div>
+      <div><span class="label">Target abandon rate %</span><div class="fixed" id="target">2.99% <span class="hint">(fixed)</span></div></div>
+      <div><label for="rate">Incentive per call ($)</label><input type="text" id="rate" inputmode="decimal" autocomplete="off" value="1"></div>
+    </div>
+    <p class="info" id="abandon-hint">The incentive is met when the actual abandon rate is below the target.</p>
+  </section>
+
+  <section aria-labelledby="h-res">
+    <h2 id="h-res">3. Results</h2>
+    <p class="info" id="empty">Results will appear here once you paste data.</p>
+    <div id="results" hidden>
+      <div class="stats">
+        <div class="stat"><div class="k">Total calls</div><div class="v" id="r-total">0</div></div>
+        <div class="stat"><div class="k">Incoming</div><div class="v" id="r-in">0</div></div>
+        <div class="stat"><div class="k">Outbound</div><div class="v" id="r-out">0</div></div>
+        <div class="stat"><div class="k">Firms</div><div class="v" id="r-firms">0</div></div>
+        <div class="stat" id="r-status-box"><div class="k">Incentive status</div><div class="v" id="r-status" style="font-size:1.2rem">-</div></div>
+        <div class="stat"><div class="k">Total incentive due</div><div class="v" id="r-money">$0.00</div></div>
+      </div>
+      <p class="info" id="r-other" hidden></p>
+      <div class="row"><button type="button" id="copy">Copy results</button><span id="copied" role="status" class="hint"></span></div>
+      <div class="table-wrap">
+        <table>
+          <caption>Calls per firm</caption>
+          <thead><tr><th scope="col">Firm</th><th scope="col">Incoming</th><th scope="col">Outbound</th><th scope="col">Total</th></tr></thead>
+          <tbody id="firm-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* CORE:START - pure logic, no DOM (tested separately in node) */
+function parseDelimited(text) {
+  const firstLine = text.split(/\r?\n/, 1)[0];
+  const d = firstLine.includes('\t') ? '\t' : ',';
+  const rows = [];
+  let row = [], cell = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else inQ = false; }
+      else cell += ch;
+    } else if (ch === '"' && cell === '') inQ = true;
+    else if (ch === d) { row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell); cell = ''; rows.push(row); row = [];
+    } else cell += ch;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+
+const normHeader = h => String(h).replace(/\s+/g, ' ').trim().toLowerCase();
+
+// Seconds since midnight from a pasted date/time cell, or null if unreadable.
+function timeOfDaySeconds(v) {
+  const s = String(v).trim();
+  if (/^\d+(\.\d+)?$/.test(s)) return Math.round((Number(s) % 1) * 86400);
+  const m = s.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?\s*([AaPp][Mm])?/);
+  if (!m) return null;
+  let h = Number(m[1]);
+  if (m[4]) h = (h % 12) + (/p/i.test(m[4]) ? 12 : 0);
+  return h * 3600 + Number(m[2]) * 60 + Number(m[3] || 0);
+}
+
+// Mirrors the Dashboard sheet: skip "ringing"; keep start <= time-of-day <= end;
+// firms come from Source Line, case-insensitive, blanks ignored.
+function analyze(rows, startSec, endSec) {
+  const header = (rows[0] || []).map(normHeader);
+  const need = { date: 'date', direction: 'direction', firm: 'source line', status: 'status' };
+  const idx = {}, missing = [];
+  for (const [k, name] of Object.entries(need)) {
+    idx[k] = header.indexOf(name);
+    if (idx[k] < 0) missing.push(name.replace(/\b\w/g, c => c.toUpperCase()));
+  }
+  if (missing.length) return { error: 'Could not find these column headers: ' + missing.join(', ') + '. Make sure the header row is included in what you paste.' };
+
+  const r = { total: 0, incoming: 0, outgoing: 0, other: 0, ringing: 0, outside: 0, unreadable: 0, noFirm: 0, read: 0, firms: new Map() };
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const dateCell = row[idx.date];
+    if (dateCell === undefined || String(dateCell).trim() === '') continue;
+    const sec = timeOfDaySeconds(dateCell);
+    if (sec === null) { r.unreadable++; continue; }
+    r.read++;
+    if (String(row[idx.status] || '').trim().toLowerCase() === 'ringing') { r.ringing++; continue; }
+    if (sec < startSec || sec > endSec) { r.outside++; continue; }
+    r.total++;
+    const dir = String(row[idx.direction] || '').trim().toLowerCase();
+    const isIn = dir === 'incoming', isOut = dir === 'outgoing';
+    if (isIn) r.incoming++; else if (isOut) r.outgoing++; else r.other++;
+    const firm = String(row[idx.firm] || '');
+    if (firm.trim() === '') { r.noFirm++; continue; }
+    const key = firm.toLowerCase();
+    let f = r.firms.get(key);
+    if (!f) { f = { name: firm, incoming: 0, outgoing: 0, total: 0 }; r.firms.set(key, f); }
+    if (isIn) f.incoming++; else if (isOut) f.outgoing++;
+    f.total++;
+  }
+  r.firmList = [...r.firms.values()].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  return r;
+}
+/* CORE:END */
+
+const TARGET_ABANDON_PCT = 2.99;
+const $ = id => document.getElementById(id);
+const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const num = id => { const v = parseFloat($(id).value.replace(/[%$,\s]/g, '')); return Number.isNaN(v) ? null : v; };
+const secOf = id => { const [h, m] = $(id).value.split(':').map(Number); return $(id).value ? h * 3600 + m * 60 : null; };
+
+let last = null;
+
+function showProblem(msg) { $('problem').textContent = msg; $('problem').hidden = !msg; }
+
+function update() {
+  const text = $('paste').value;
+  const startSec = secOf('start'), endSec = secOf('end');
+  last = null;
+  $('results').hidden = true; $('empty').hidden = false; $('copied').textContent = '';
+  if (text.trim() === '') { $('status').textContent = 'Waiting for data.'; showProblem(''); return; }
+  if (startSec === null || endSec === null) { showProblem('Enter both a start time and an end time.'); return; }
+
+  const r = analyze(parseDelimited(text), startSec, endSec + 59); // end time includes its whole last minute
+  if (r.error) { $('status').textContent = 'Data not recognised.'; showProblem(r.error); return; }
+  last = r;
+
+  const notes = [];
+  if (startSec > endSec) notes.push('The start time is after the end time, so no calls can match.');
+  if (r.unreadable) notes.push(r.unreadable + ' row(s) were skipped because their date/time could not be read.');
+  showProblem(notes.join(' '));
+  $('status').textContent = r.read + ' calls read. Left out: ' + r.ringing + ' still ringing, ' + r.outside + ' outside the time window.';
+
+  $('r-total').textContent = r.total;
+  $('r-in').textContent = r.incoming;
+  $('r-out').textContent = r.outgoing;
+  $('r-firms').textContent = r.firms.size;
+
+  const extra = [];
+  if (r.other) extra.push(r.other + ' counted call(s) have a direction other than incoming/outgoing, so they are in the total only.');
+  if (r.noFirm) extra.push(r.noFirm + ' counted call(s) have no firm name, so they are not in the table.');
+  $('r-other').textContent = extra.join(' '); $('r-other').hidden = !extra.length;
+
+  const actual = num('actual'), rate = num('rate');
+  const box = $('r-status-box');
+  box.classList.remove('met', 'notmet');
+  if (actual === null) $('r-status').textContent = 'Enter the actual abandon rate';
+  else if (actual < TARGET_ABANDON_PCT) { $('r-status').textContent = '✅ Incentive Met'; box.classList.add('met'); }
+  else { $('r-status').textContent = '❌ Not Met'; box.classList.add('notmet'); }
+  const met = actual !== null && actual < TARGET_ABANDON_PCT;
+  $('r-money').textContent = rate === null || actual === null ? '-' : money.format(met ? rate * r.total : 0);
+
+  const body = $('firm-rows');
+  body.replaceChildren(...r.firmList.map(f => {
+    const tr = document.createElement('tr');
+    [f.name, f.incoming, f.outgoing, f.total].forEach(v => { const td = document.createElement('td'); td.textContent = v; tr.append(td); });
+    return tr;
+  }));
+  $('results').hidden = false; $('empty').hidden = true;
+}
+
+function copyResults() {
+  if (!last) return;
+  const lines = [
+    'Total calls\t' + last.total, 'Incoming\t' + last.incoming, 'Outbound\t' + last.outgoing, 'Firms\t' + last.firms.size,
+    'Incentive status\t' + $('r-status').textContent, 'Total incentive due\t' + $('r-money').textContent, '',
+    'Firm\tIncoming\tOutbound\tTotal',
+    ...last.firmList.map(f => [f.name, f.incoming, f.outgoing, f.total].join('\t'))
+  ];
+  navigator.clipboard.writeText(lines.join('\n'))
+    .then(() => { $('copied').textContent = 'Copied.'; })
+    .catch(() => { $('copied').textContent = 'Could not copy. Your browser blocked clipboard access.'; });
+}
+
+$('paste').addEventListener('input', update);
+['start', 'end', 'actual', 'rate'].forEach(id => $(id).addEventListener('input', update));
+$('copy').addEventListener('click', copyResults);
+$('clear').addEventListener('click', () => { $('paste').value = ''; $('file').value = ''; update(); $('paste').focus(); });
+$('file').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  f.text().then(t => { $('paste').value = t; update(); });
+});
+update();
+</script>
+</body>
+</html>
