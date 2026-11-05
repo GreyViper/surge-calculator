@@ -27,6 +27,9 @@
   section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
   label, .label { display: block; font-weight: 600; margin-bottom: 4px; }
   .fixed { padding: 8px 0; font-weight: 600; }
+  .req { color: var(--bad); font-weight: 700; }
+  [aria-invalid="true"] { border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .hint { color: var(--muted); font-size: .875rem; font-weight: 400; }
   textarea, input { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
   textarea { min-height: 130px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: .85rem; }
@@ -58,28 +61,28 @@
 <body>
 <main>
   <h1>Surge Calculator</h1>
-  <p class="lede">Paste your call table (headers included), set the window and rates, and read off the totals. Nothing you paste leaves this page.</p>
+  <p class="lede">Paste your call table (headers included), set the window and rates, and read off the totals. Nothing you paste leaves this page. Fields marked <span class="req" aria-hidden="true">*</span><span class="sr-only">with an asterisk</span> are required.</p>
 
   <section aria-labelledby="h-data">
     <h2 id="h-data">1. Your call data</h2>
-    <label for="paste">Paste the table here <span class="hint">(copy it with its header row)</span></label>
-    <textarea id="paste" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
+    <label for="paste">Paste the table here <span class="req" aria-hidden="true">*</span> <span class="hint">(copy it with its header row)</span></label>
+    <textarea id="paste" aria-required="true" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
     <div class="row">
       <label class="file-btn">Or choose a CSV/TSV file<input type="file" id="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain"></label>
       <button type="button" id="clear">Clear</button>
     </div>
     <p class="info" id="status" role="status">Waiting for data.</p>
-    <div class="note" id="problem" hidden></div>
+    <div class="note" id="problem" role="alert" hidden></div>
   </section>
 
   <section aria-labelledby="h-set">
     <h2 id="h-set">2. Settings</h2>
     <div class="settings">
-      <div><label for="start">Start time</label><input type="time" id="start" value="08:30"></div>
-      <div><label for="end">End time</label><input type="time" id="end" value="22:59"></div>
-      <div><label for="actual">Actual abandon rate % <span class="hint">(from your other report)</span></label><input type="text" id="actual" inputmode="decimal" autocomplete="off" aria-describedby="abandon-hint"></div>
+      <div><label for="start">Start time <span class="req" aria-hidden="true">*</span></label><input type="time" id="start" value="08:30" aria-required="true"></div>
+      <div><label for="end">End time <span class="req" aria-hidden="true">*</span></label><input type="time" id="end" value="22:59" aria-required="true"></div>
+      <div><label for="actual">Actual abandon rate % <span class="req" aria-hidden="true">*</span> <span class="hint">(from your other report)</span></label><input type="text" id="actual" inputmode="decimal" autocomplete="off" aria-required="true" aria-describedby="abandon-hint"></div>
       <div><span class="label">Target abandon rate %</span><div class="fixed" id="target">2.99% <span class="hint">(fixed)</span></div></div>
-      <div><label for="rate">Incentive per call ($)</label><input type="text" id="rate" inputmode="decimal" autocomplete="off" value="1"></div>
+      <div><label for="rate">Incentive per call ($) <span class="req" aria-hidden="true">*</span></label><input type="text" id="rate" inputmode="decimal" autocomplete="off" aria-required="true" value="1"></div>
     </div>
     <p class="info" id="abandon-hint">The incentive is met when the actual abandon rate is below the target.</p>
     <div class="row"><button type="button" id="calc" class="primary">Calculate</button><span id="stale" class="hint" role="status"></span></div>
@@ -205,18 +208,44 @@ function reset() {
   last = null;
   $('results').hidden = true; $('empty').hidden = false; $('copied').textContent = ''; $('stale').textContent = '';
   $('status').textContent = 'Waiting for data.'; showProblem('');
+  REQUIRED.forEach(f => $(f.id).removeAttribute('aria-invalid'));
 }
 
 function markStale(msg) { if (msg || last) $('stale').textContent = msg || 'Inputs changed. Click Calculate to update the results.'; }
 
-function calculate() {
-  const text = $('paste').value;
-  const startSec = secOf('start'), endSec = secOf('end');
-  reset();
-  if (text.trim() === '') { showProblem('Paste your call data first.'); return; }
-  if (startSec === null || endSec === null) { showProblem('Enter both a start time and an end time.'); return; }
+const REQUIRED = [
+  { id: 'paste', label: 'Call data' },
+  { id: 'start', label: 'Start time' },
+  { id: 'end', label: 'End time' },
+  { id: 'actual', label: 'Actual abandon rate %', numeric: true },
+  { id: 'rate', label: 'Incentive per call ($)', numeric: true }
+];
 
-  const r = analyze(parseDelimited(text), startSec, endSec + 59); // end time includes its whole last minute
+// Flags every required field that is empty or not a number; returns true when all are fine.
+function validate() {
+  const missing = [], notNumbers = [];
+  let first = null;
+  for (const f of REQUIRED) {
+    const blank = $(f.id).value.trim() === '';
+    const bad = blank || (f.numeric && num(f.id) === null);
+    $(f.id).setAttribute('aria-invalid', bad);
+    if (bad && !first) first = $(f.id);
+    if (blank) missing.push(f.label); else if (bad) notNumbers.push(f.label);
+  }
+  const parts = [];
+  if (missing.length) parts.push('Please fill in: ' + missing.join(', ') + '.');
+  if (notNumbers.length) parts.push('This must be a number: ' + notNumbers.join(', ') + '.');
+  showProblem(parts.join(' '));
+  if (first) first.focus();
+  return !first;
+}
+
+function calculate() {
+  reset();
+  if (!validate()) return;
+  const startSec = secOf('start'), endSec = secOf('end');
+
+  const r = analyze(parseDelimited($('paste').value), startSec, endSec + 59); // end time includes its whole last minute
   if (r.error) { $('status').textContent = 'Data not recognised.'; showProblem(r.error); return; }
   last = r;
 
@@ -239,11 +268,9 @@ function calculate() {
   const actual = num('actual'), rate = num('rate');
   const box = $('r-status-box');
   box.classList.remove('met', 'notmet');
-  if (actual === null) $('r-status').textContent = 'Enter the actual abandon rate';
-  else if (actual < TARGET_ABANDON_PCT) { $('r-status').textContent = '✅ Incentive Met'; box.classList.add('met'); }
+  if (actual < TARGET_ABANDON_PCT) { $('r-status').textContent = '✅ Incentive Met'; box.classList.add('met'); }
   else { $('r-status').textContent = '❌ Not Met'; box.classList.add('notmet'); }
-  const met = actual !== null && actual < TARGET_ABANDON_PCT;
-  $('r-money').textContent = rate === null || actual === null ? '-' : money.format(met ? rate * r.total : 0);
+  $('r-money').textContent = money.format(actual < TARGET_ABANDON_PCT ? rate * r.total : 0);
 
   const body = $('firm-rows');
   body.replaceChildren(...r.firmList.map(f => {
@@ -268,10 +295,9 @@ function copyResults() {
 }
 
 $('calc').addEventListener('click', calculate);
-$('paste').addEventListener('input', () => markStale());
-['start', 'end', 'actual', 'rate'].forEach(id => {
-  $(id).addEventListener('input', () => markStale());
-  $(id).addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+['paste', 'start', 'end', 'actual', 'rate'].forEach(id => {
+  $(id).addEventListener('input', () => { $(id).removeAttribute('aria-invalid'); markStale(); });
+  if (id !== 'paste') $(id).addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
 });
 $('copy').addEventListener('click', copyResults);
 $('clear').addEventListener('click', () => { $('paste').value = ''; $('file').value = ''; reset(); $('paste').focus(); });
