@@ -23,6 +23,11 @@
   .fixed { padding: 8px 0; font-weight: 600; }
   .req { color: var(--bad); font-weight: 700; }
   [aria-invalid="true"] { border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad); }
+  summary { cursor: pointer; font-weight: 700; font-size: 1.1rem; }
+  summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  details ol { margin: 12px 0 0; padding-left: 1.4em; }
+  details li { margin-bottom: 6px; }
+  .clip { display: block; max-width: 100%; height: auto; margin-top: 12px; border: 1.5px solid var(--border); border-radius: 6px; background: #fff; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .hint { color: var(--muted); font-size: .9rem; font-weight: 400; }
   textarea, input { width: 100%; font: inherit; color: var(--text); background: var(--field); border: 1.5px solid var(--border); border-radius: 6px; padding: 8px 10px; }
@@ -56,6 +61,21 @@
 <main>
   <h1>Surge Calculator</h1>
   <p class="lede">Paste your call table (headers included), set the window and rates, and read off the totals. Nothing you paste leaves this page. Fields marked <span class="req" aria-hidden="true">*</span><span class="sr-only">with an asterisk</span> are required.</p>
+
+  <section aria-labelledby="h-how">
+    <details open>
+      <summary id="h-how">How to copy the data from the call report</summary>
+      <picture>
+        <source media="(prefers-reduced-motion: reduce)" srcset="how-to-copy-still.png">
+        <img class="clip" src="how-to-copy.gif" width="900" height="313" alt="Screen recording of the Rep Call Stat Detail report. The Search button is clicked and the table loads. A selection is dragged from the Date header at the top left, down through every row, and the page scrolls until the TOTAL row at the bottom is selected. Firm names and phone numbers are blurred.">
+      </picture>
+      <ol>
+        <li>Open the <strong>Rep Call Stats</strong> report, enter the rep and the date range, tick <strong>Detail Report</strong>, and click <strong>Search</strong>.</li>
+        <li>Click at the start of the <strong>Date</strong> header, at the top left of the table, and drag down to the bottom of the table. The page scrolls as you go. The <strong>TOTAL</strong> row at the bottom is optional, since the calculator ignores it.</li>
+        <li>Copy what you selected (Ctrl+C) and paste it into the box below (Ctrl+V).</li>
+      </ol>
+    </details>
+  </section>
 
   <section aria-labelledby="h-data">
     <h2 id="h-data">1. Your call data</h2>

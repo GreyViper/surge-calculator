@@ -6,6 +6,14 @@ A one-page tool that turns a call log into the numbers needed for the surge ince
 
 Everything runs in your browser. The data you paste is never uploaded, saved, or sent anywhere, and there is no login, so any number of people can use it at the same time.
 
+## How to copy the data
+
+![Screen recording: click Search on the Rep Call Stat Detail report, then drag a selection from the Date header down to the TOTAL row. Firm names and phone numbers are blurred.](how-to-copy.gif)
+
+1. Open the **Rep Call Stats** report, enter the rep and the date range, tick **Detail Report**, and click **Search**.
+2. Click at the start of the **Date** header, at the top left of the table, and drag down to the bottom of the table. The page scrolls as you go. The **TOTAL** row at the bottom is optional, since the calculator ignores it.
+3. Copy what you selected (Ctrl+C), then paste it into the calculator (Ctrl+V).
+
 ## How to use it
 
 1. **Copy the call table** from the website, including the header row (`Date`, `Direction`, `Source Line`, and so on).
