@@ -110,9 +110,14 @@
 
 <script>
 /* CORE:START - pure logic, no DOM (tested separately in node) */
+const DATE_START = /^\s*(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}\/\d{2,4})/;
+
 function parseDelimited(text) {
-  const firstLine = text.split(/\r?\n/, 1)[0];
-  const d = firstLine.includes('\t') ? '\t' : ',';
+  const lines = text.split(/\r?\n/);
+  const d = lines[0].includes('\t') ? '\t' : ',';
+  // Websites copy multi-line cells (e.g. "Action") without quotes, so a physical
+  // line is only a new row if it starts with a date; other lines continue the cell.
+  const foldLines = normHeader(lines[0].split(d, 1)[0]) === 'date' && lines.slice(1).some(l => DATE_START.test(l));
   const rows = [];
   let row = [], cell = '', inQ = false;
   for (let i = 0; i < text.length; i++) {
@@ -124,6 +129,7 @@ function parseDelimited(text) {
     else if (ch === d) { row.push(cell); cell = ''; }
     else if (ch === '\n' || ch === '\r') {
       if (ch === '\r' && text[i + 1] === '\n') i++;
+      if (foldLines && !DATE_START.test(text.slice(i + 1, i + 40))) { cell += '\n'; continue; }
       row.push(cell); cell = ''; rows.push(row); row = [];
     } else cell += ch;
   }
