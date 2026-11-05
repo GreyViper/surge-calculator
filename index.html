@@ -3,55 +3,49 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="light">
 <title>Surge Calculator</title>
 <style>
   :root {
-    --bg: #f5f6f8; --card: #ffffff; --text: #1b1f24; --muted: #5b6470;
-    --border: #d5d9e0; --accent: #0b57d0; --good: #137333; --bad: #b3261e;
-    --good-bg: #e6f4ea; --bad-bg: #fce8e6; --warn-bg: #fff4d6; --on-accent: #ffffff;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #14171c; --card: #1d222a; --text: #e8eaed; --muted: #a0a8b3;
-      --border: #38404b; --accent: #8ab4f8; --good: #81c995; --bad: #f28b82;
-      --good-bg: #17301f; --bad-bg: #3a1c1a; --warn-bg: #3a3014; --on-accent: #14171c;
-    }
+    --bg: #ffffff; --card: #eef5ff; --field: #ffffff; --text: #111827; --muted: #374151;
+    --border: #6b7f9e; --panel-border: #b9cff2; --line: #c5d3e8;
+    --accent: #0b4fc2; --on-accent: #ffffff; --good: #0a6b2b; --bad: #a31515;
+    --good-bg: #e2f5e8; --bad-bg: #fdeaea; --warn-bg: #fff0b8;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
   main { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
-  h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  h1 { margin: 0 0 4px; font-size: 1.7rem; color: var(--accent); }
   h2 { margin: 0 0 12px; font-size: 1.1rem; }
   .lede { margin: 0 0 20px; color: var(--muted); }
-  section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  section { background: var(--card); border: 1px solid var(--panel-border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
   label, .label { display: block; font-weight: 600; margin-bottom: 4px; }
   .fixed { padding: 8px 0; font-weight: 600; }
   .req { color: var(--bad); font-weight: 700; }
   [aria-invalid="true"] { border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad); }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .hint { color: var(--muted); font-size: .875rem; font-weight: 400; }
-  textarea, input { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+  .hint { color: var(--muted); font-size: .9rem; font-weight: 400; }
+  textarea, input { width: 100%; font: inherit; color: var(--text); background: var(--field); border: 1.5px solid var(--border); border-radius: 6px; padding: 8px 10px; }
   textarea { min-height: 130px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: .85rem; }
   :is(textarea, input, button):focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
-  button, .file-btn { font: inherit; font-weight: 600; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; }
+  button, .file-btn { font: inherit; font-weight: 600; padding: 8px 14px; border-radius: 6px; border: 1.5px solid var(--border); background: var(--field); color: var(--text); cursor: pointer; }
   button:hover, .file-btn:hover { border-color: var(--accent); }
   button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .file-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
   .file-btn:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
   .settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
-  .stat { border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+  .stat { background: var(--field); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; }
   .stat .k { color: var(--muted); font-size: .85rem; }
   .stat .v { font-size: 1.7rem; font-weight: 700; }
   .stat.met { background: var(--good-bg); } .stat.met .v { color: var(--good); }
   .stat.notmet { background: var(--bad-bg); } .stat.notmet .v { color: var(--bad); }
-  .note { background: var(--warn-bg); border-radius: 6px; padding: 8px 12px; margin: 10px 0 0; font-size: .9rem; }
+  .note { background: var(--warn-bg); border-left: 4px solid #b88a00; border-radius: 6px; padding: 8px 12px; margin: 10px 0 0; font-size: .9rem; }
   .info { color: var(--muted); font-size: .9rem; margin: 10px 0 0; }
   table { width: 100%; border-collapse: collapse; margin-top: 8px; }
   caption { text-align: left; font-weight: 600; padding-bottom: 4px; }
-  th, td { padding: 6px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+  th, td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; }
   th:not(:first-child), td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
   .table-wrap { max-height: 480px; overflow: auto; }
   thead th { position: sticky; top: 0; background: var(--card); }
