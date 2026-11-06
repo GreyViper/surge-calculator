@@ -28,8 +28,8 @@ If you change anything after calculating, a note appears saying the results are 
 | Field | Required | What to enter |
 |---|---|---|
 | Call data | Yes | The pasted table, with its header row. |
-| Start time | Yes | First minute of the window. Default 8:30 AM. |
-| End time | Yes | Last minute of the window. Default 10:59 PM. The whole minute counts, so a call at 22:59:30 is included in a 22:59 window. |
+| Start time | Yes | First minute of the window. Default 12:00 AM. |
+| End time | Yes | Last minute of the window. Default 11:59 PM. The whole minute counts, so a call at 23:59:30 is included in a 23:59 window. With the defaults, the whole day is counted. |
 | Actual abandon rate % | Yes | Your actual abandon rate for the period, as a percentage (for example `2.5`). It comes from your other report; the calculator can't work it out from the call log. |
 | Incentive per call ($) | Yes | Dollars paid per counted call. Default `1`. Change it to `2` or anything else. |
 | Target abandon rate % | Fixed | Always 2.99%. It can't be edited on the page. |
