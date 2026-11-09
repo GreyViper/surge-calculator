@@ -149,7 +149,7 @@ function parseDelimited(text) {
     else if (ch === '\n' || ch === '\r') {
       if (ch === '\r' && text[i + 1] === '\n') i++;
       // A row that already has every header column is finished; whatever follows (e.g. a totals footer) is not part of it.
-      const complete = rows.length > 0 && row.length + 1 >= rows[0].length;
+      const complete = rows.length > 0 && row.length + 2 >= rows[0].length; // allows for rows that arrive one cell short
       if (foldLines && !complete && !DATE_START.test(text.slice(i + 1, i + 40))) { cell += '\n'; continue; }
       row.push(cell); cell = ''; rows.push(row); row = [];
     } else cell += ch;
@@ -191,7 +191,9 @@ function analyze(rows, startSec, endSec) {
     const sec = timeOfDaySeconds(dateCell);
     if (sec === null) { r.unreadable++; continue; }
     r.read++;
-    if (String(row[idx.status] || '').trim().toLowerCase() === 'ringing') { r.ringing++; continue; }
+    // Status is the last column; some rows come through one cell short, so read it from the end of the row.
+    const statusCell = idx.status === header.length - 1 ? row[row.length - 1] : row[idx.status];
+    if (String(statusCell || '').trim().toLowerCase() === 'ringing') { r.ringing++; continue; }
     if (sec < startSec || sec > endSec) { r.outside++; continue; }
     r.total++;
     const dir = String(row[idx.direction] || '').trim().toLowerCase();
